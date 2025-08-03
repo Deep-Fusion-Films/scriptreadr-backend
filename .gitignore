@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Virtual environment
+env/
+venv/
+
+# Django specific
+*.sqlite3
+db.sqlite3
+
+# Secrets
+.env
+gcs-key.json
+
+# VSCode / IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
