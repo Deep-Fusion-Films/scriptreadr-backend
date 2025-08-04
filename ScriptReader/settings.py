@@ -33,7 +33,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
      "localhost",
     "127.0.0.1",
-    "speaker-backend-jqqw.onrender.com",
+    "scriptreadr-backend-production.up.railway.app",
 ]
 
 
