@@ -142,7 +142,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://speaker-frontend-lovat.vercel.app"
+    "https://scriptreadr-frontend.vercel.app"
 ]
 
 CORS_ALLOW_CREDENTIALS = True

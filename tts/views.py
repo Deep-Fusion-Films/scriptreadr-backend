@@ -214,7 +214,8 @@ class ProcessedAudioView(APIView):
             # CORS support
             allowed_origins = [
                 "http://localhost:5173",
-                "https://speaker-frontend-lovat.vercel.app"
+                "https://scriptreadr-frontend.vercel.app"
+                
             ]
             origin = request.headers.get("Origin")
 
