@@ -68,7 +68,7 @@ def send_reset_email(to_email, token):
         <p>Click the link below to reset your password:</p>
         <a href="{reset_url}">{reset_url}</a>"""
         
-    params = resend.Emails.SendParams = {
+    params = {
         "from": "ScriptReadr <onboarding@resend.dev>",
         "to": to_email,
         "subject": "Reset your password",

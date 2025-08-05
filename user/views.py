@@ -67,10 +67,15 @@ class LoginAPIView(APIView):
         if not password.strip():
             return Response({'detail': 'No empty field(s)'}, status=status.HTTP_400_BAD_REQUEST)
        
+        try:
+           user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response ({'detail': 'User with this email does not exist'}, status=status.HTTP_404_NOT_FOUND)
+       
         user = authenticate(request, username=email, password=password)
                 
         if user is None:
-            raise exceptions.AuthenticationFailed('User does not exists')
+            raise exceptions.AuthenticationFailed('Incorrect Password')
         
         
         refresh = RefreshToken.for_user(user)
@@ -186,7 +191,7 @@ class ForgotAPIView(APIView):
         try:
             send_reset_email(email, token)
         except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'detail': 'could not send email, please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response({
             'message': 'An email has been sent to your registered email'
