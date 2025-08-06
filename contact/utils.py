@@ -6,6 +6,7 @@ from django.conf import settings
 import time
 from datetime import datetime
 import resend
+import traceback
 
 
 
@@ -43,4 +44,5 @@ def send_contact_email(from_name, from_email, subject, message):
         return True, None
     except Exception as e:
         print(f"[Resend Error] {str(e)}")
+        traceback.print_exc()
         return False, str(e)

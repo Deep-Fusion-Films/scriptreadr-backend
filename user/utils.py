@@ -75,7 +75,9 @@ def send_reset_email(to_email, token):
         "html": html_content
     }
 
+    
     email = resend.Emails.send(params)
-    print(email)
+   
+   
 
     

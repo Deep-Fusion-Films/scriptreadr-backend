@@ -250,6 +250,7 @@ class FileUploadView(APIView):
         except Exception as e:
             subscription.scripts_remaining +=1
             subscription.save()
+            print({e})
             return Response({"error": "Could not upload file to google cloud, please try again later"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # mode = request.data.get('mode', 'screenplay') #Default to 'screenplay'
