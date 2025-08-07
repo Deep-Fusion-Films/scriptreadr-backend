@@ -272,7 +272,7 @@ class GoogleSigninAPIView(APIView):
             user = User.objects.filter(email=id['email']).first()
         
             if user is None:
-                raise exceptions.AuthenticationFailed('User does not exists')
+                raise exceptions.AuthenticationFailed('User does not exist')
         
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)

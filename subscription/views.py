@@ -205,7 +205,7 @@ class CurrentSubscriptionApiView(APIView):
             
             return Response(data, status=status.HTTP_200_OK)
         except UserSubscription.DoesNotExist:
-            return Response ({"detail": "Not Active"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response ({"detail": "Not Subscribed"}, status=status.HTTP_400_BAD_REQUEST)
         
         
         

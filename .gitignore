@@ -15,6 +15,7 @@ db.sqlite3
 # Secrets
 .env
 gcs-key.json
+convert-to-json.py
 
 # VSCode / IDEs
 .vscode/

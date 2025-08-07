@@ -219,6 +219,18 @@ class FileUploadView(APIView):
             subscription.scripts_remaining +=1
             subscription.save()
             return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        file_size_bytes = uploaded_file.size
+        file_size_kb = file_size_bytes / 1024
+        
+        max_file_size = 2048;
+        
+        if file_size_kb > max_file_size:
+            subscription.scripts_remaining +=1
+            subscription.save()
+            return Response({"error": "File is too large. Max allowed is 2MB."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        
 
         file_name = uploaded_file.name.lower()
         # mime_type = uploaded_file.content_type
