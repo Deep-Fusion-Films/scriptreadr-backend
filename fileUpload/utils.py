@@ -1,5 +1,6 @@
 import re
 import requests
+from django.conf import settings
 
 def chunk_script_text(text, chunk_size=5000):
         """
@@ -82,6 +83,9 @@ def chunk_script_text(text, chunk_size=5000):
         add_chunk()
         
         return chunks
+    
+    
+ 
 
 def call_claude_api(prompt, text_chunk):
     """
@@ -96,8 +100,8 @@ def call_claude_api(prompt, text_chunk):
         str | None: The formatted text or None if an error occurred.
     """
     headers = {
-        "Content-Type": "application/json",
-        "x-api-key": "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",
+        "Content-Type":"application/json",
+        "x-api-key":settings.CLAUD_API_KEY,  
         "anthropic-version": "2023-06-01"
     }
 
