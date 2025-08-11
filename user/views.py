@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.authentication import get_authorization_header
 from rest_framework import exceptions,status
 from user.serializers import UserSerializer
-from user.models import User, UserToken, Reset
+from user.models import User, UserToken, Reset, UserSubscription
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.core.mail import send_mail
 from datetime import timedelta
@@ -62,6 +62,9 @@ class LoginAPIView(APIView):
         email = request.data['email']
         password = request.data['password']
          
+         
+         
+         
         if not email.strip():
             return Response({'detail': 'No empty field(s)'}, status=status.HTTP_400_BAD_REQUEST)
         if not password.strip():
@@ -76,6 +79,20 @@ class LoginAPIView(APIView):
                 
         if user is None:
             raise exceptions.AuthenticationFailed('Incorrect Password')
+        
+        
+        
+        if user.email and user.email.lower().endswith('@deepfusionfilms.com'):
+            subscription, created = UserSubscription.objects.get_or_create(user=user)
+        
+            subscription.current_plan = 'studio'
+            subscription.is_active = True
+            subscription.subscribed_at = timezone.now()
+            subscription.scripts_remaining = 25  # or whatever unlimited means
+            subscription.audio_remaining = 25
+            subscription.current_period_end = timezone.now() + timedelta(days=365)  # 1 year validity
+        
+            subscription.save()
         
         
         refresh = RefreshToken.for_user(user)
@@ -273,6 +290,19 @@ class GoogleSigninAPIView(APIView):
         
             if user is None:
                 raise exceptions.AuthenticationFailed('User does not exist')
+            
+            
+            if user.email and user.email.lower().endswith('@deepfusionfilms.com'):
+                subscription, created = UserSubscription.objects.get_or_create(user=user)
+        
+                subscription.current_plan = 'studio'
+                subscription.is_active = True
+                subscription.subscribed_at = timezone.now()
+                subscription.scripts_remaining = 25  # or whatever unlimited means
+                subscription.audio_remaining = 25
+                subscription.current_period_end = timezone.now() + timedelta(days=365)  # 1 year validity
+        
+                subscription.save()
         
             refresh = RefreshToken.for_user(user)
             access_token = str(refresh.access_token)

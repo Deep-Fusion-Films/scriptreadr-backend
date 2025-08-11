@@ -20,6 +20,8 @@ import os
 import json
 from .tasks import process_script_with_claude
 from celery.result import AsyncResult
+from celery.exceptions import CeleryError
+from kombu.exceptions import OperationalError
 from time import sleep
 from django.utils import timezone
 
@@ -174,6 +176,7 @@ class SubscriptionStatusView(APIView):
         
         user = request.user
         
+    
         try:
            subscription = UserSubscription.objects.get(user=user)
            if not subscription.is_active or (subscription.current_period_end and subscription.current_period_end < timezone.now()):
@@ -321,7 +324,10 @@ class FileUploadView(APIView):
         
         # #use the chunk function
         # chunks = chunk_script_text(file_text)
-        task = process_script_with_claude.delay(default_prompt, file_text, user.email)
+        try:
+            task = process_script_with_claude.delay(default_prompt, file_text, user.email)
+        except (CeleryError, OperationalError) as e:
+            return Response({"error": "Background Processing Service is currently unavailable please try again later."},status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({"task_id": task.id}, status=200)
         
 
