@@ -75,4 +75,3 @@ class RegisterAPITest(TestCase):
     #      response = self.client.post(self.url, data=payload, format='json')
     #      self.assertEqual(response.status_code, 400)
     #      self.assertIn('Email is already in use', response.data['detail'])
-        

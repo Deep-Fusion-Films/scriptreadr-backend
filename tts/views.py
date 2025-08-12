@@ -237,7 +237,38 @@ class ProcessedAudioView(APIView):
         
         
         
-#voice preview class
+#voice preview classes
+
+
+class VoicePreviewSubcriptionStatusView(APIView):
+    authentication_classes = [JWTAuthentication]
+    
+    def get(self, request):
+        
+        user = request.user
+
+        try:
+           subscription = UserSubscription.objects.get(user=user)
+           if not subscription.is_active or (subscription.current_period_end and subscription.current_period_end < timezone.now()):
+               return Response(
+                   {"error": "You do not have an active subscription or your subscription has expired."},
+                   status=status.HTTP_403_FORBIDDEN
+               )
+               
+            #check scripts_remaining before allowing upload
+           if subscription.audio_remaining <= 0:
+                return Response({"error": "You need to have one or more 'audio(s) remaining' to preview voices, it will not be used."},
+                        status=status.HTTP_403_FORBIDDEN)
+       
+        except UserSubscription.DoesNotExist: 
+           return Response(
+               {"error": "You do not have an active subscription."},
+               status=status.HTTP_403_FORBIDDEN
+           )
+           
+        return Response({"success": "user has subscription"},status=status.HTTP_200_OK)
+        
+           
 class PreviewVoicesAPIView(APIView):
     def post(self, request):
         voice_id = request.data.get("voice_id") or settings.VOICE_ID
@@ -267,10 +298,10 @@ class PreviewVoicesAPIView(APIView):
             )
             
             if response.status_code != 200:
-                    return Response({"error": "Failed to generate audio", "details": response.text}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response({"error": "Failed to generate preview audio, please try again later.", "details": response.text}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
             return HttpResponse(response.content, content_type="audio/mpeg")
 
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": 'failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
  
