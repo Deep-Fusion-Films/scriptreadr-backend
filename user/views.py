@@ -23,6 +23,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 
+from rest_framework.throttling import UserRateThrottle
+from rest_framework.exceptions import Throttled
+
 # Create your views here.
 
 #register users
@@ -56,13 +59,36 @@ class RegisterAPIView(APIView):
         serializer.save()
         return Response(serializer.data)
            
+           
+#login throttle, prevents brute force attack on route
+class LoginRateThrottle(UserRateThrottle):
+    rate = '5/min'
+    
+    def get_cache_key(self, request, view):
+        ident = request.data.get('email', '').lower().strip()
+        if not ident:
+            ident = self.get_ident(request)
+        return self.cache_format % {
+            'scope': self.scope,
+            'ident': ident
+        }
+        
+    def wait(self):
+        #returns the remaining time in seconds
+        return super().wait()
+
+    def allow_request(self, request, view):
+        allowed = super().allow_request(request, view)
+        if not allowed:
+            raise Throttled(detail=f'Too many login attempts. Please wait {int(self.wait())} seconds before trying again.')
+        return allowed
+    
 #login users
 class LoginAPIView(APIView):
+    throttle_classes = [LoginRateThrottle]
     def post(self, request):
         email = request.data['email']
         password = request.data['password']
-         
-         
          
          
         if not email.strip():
@@ -245,6 +271,10 @@ class ResetAPIView(APIView):
             'message': 'You have successfully reset your password'
         })
 
+#register throttle, stops constant registration from the same IP address after 3 tries withing 1 minute.
+class RegistrationRateThrottle(UserRateThrottle):
+    rate = '3/min' 
+    
 #google register view
 class GoogleRegisterAPIView(APIView):
     def post(self, request):
