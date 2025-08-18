@@ -9,6 +9,7 @@ from io import BytesIO
 from user.models import Audio
 from google.cloud import storage
 from utils.generic_script_parser import parse_script_generic
+from utils.clean_speaker_parser import clean_speaker_voices
 from django.conf import settings
 from .tasks import process_script_audio
 from celery.result import AsyncResult
@@ -104,13 +105,19 @@ class Tts(APIView):
         input_text = request.data.get('text')
         
         # voice_id = request.data.get("voice_id") or settings.VOICE_ID  # Default ElevenLabs voice
-        speaker_voices = request.data.get('speaker_voices')
+        speaker_voices_raw = request.data.get('speaker_voices')
         
+        print('uncleaned voices', speaker_voices_raw)
         
         if not input_text:
             subscription.audio_remaining -=1
             subscription.save() 
             return Response({"error": "No text provided"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
+        speaker_voices = clean_speaker_voices(speaker_voices_raw)
+        
+        print('cleaned voices', speaker_voices)
         
         cleaned_text = sanitize_for_tts(input_text)        
        
@@ -238,8 +245,6 @@ class ProcessedAudioView(APIView):
         
         
 #voice preview classes
-
-
 class VoicePreviewSubcriptionStatusView(APIView):
     authentication_classes = [JWTAuthentication]
     
