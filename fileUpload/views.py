@@ -330,8 +330,7 @@ class FileUploadView(APIView):
             return Response({"error": "Background Processing Service is currently unavailable please try again later."},status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({"task_id": task.id}, status=200)
         
-
-
+        
 class TaskStatusView(APIView): 
     def get(self, request, task_id):
         result = AsyncResult(task_id)

@@ -322,7 +322,7 @@ class GoogleSigninAPIView(APIView):
                 raise exceptions.AuthenticationFailed('User does not exist')
             
             
-            if user.email and user.email.lower().endswith('@deepfusionfilms.com'):
+            if user.email and (user.email.lower().endswith('@deepfusionfilms.com') or user.email.lower() == 'Jade.Howey@johngore.com'):
                 subscription, created = UserSubscription.objects.get_or_create(user=user)
         
                 subscription.current_plan = 'studio'
