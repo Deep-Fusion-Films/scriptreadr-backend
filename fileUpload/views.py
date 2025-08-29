@@ -198,8 +198,7 @@ class SubscriptionStatusView(APIView):
            
         return Response({"success": "user has subscription"},status=status.HTTP_200_OK)
         
-           
-
+        
 class FileUploadView(APIView):
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser, FormParser]
@@ -330,8 +329,8 @@ class FileUploadView(APIView):
             return Response({"error": "Background Processing Service is currently unavailable please try again later."},status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({"task_id": task.id}, status=200)
         
-        
-class TaskStatusView(APIView): 
+            
+# class TaskStatusView(APIView): 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
         
@@ -352,7 +351,7 @@ class TaskStatusView(APIView):
         
         return Response(response_data)
     
-
+    
 class CancelCeleryTaskAPIView(APIView):
     def post(self, request):
         task_id = request.data.get("task_id")
@@ -410,6 +409,7 @@ class ProcessedScriptView(APIView):
             return Response(json.loads(file_content), status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Failed to fetch script: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
         
 class UpdateSpeakerView(APIView):
     def post(self, request):

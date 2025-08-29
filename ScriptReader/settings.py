@@ -112,6 +112,8 @@ CELERY_TIMEZONE = 'UTC' #Explicitly set Celery timezone to UTC
 
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -219,6 +221,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'ScriptReader.wsgi.application'
+ASGI_APPLICATION = 'ScriptReader.asgi.application'
 
 
 # Database
