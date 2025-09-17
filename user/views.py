@@ -108,17 +108,17 @@ class LoginAPIView(APIView):
         
         
         
-        if user.email and user.email.lower().endswith('@deepfusionfilms.com'):
-            subscription, created = UserSubscription.objects.get_or_create(user=user)
+        if user.email and (user.email.lower().endswith('@deepfusionfilms.com') or user.email.lower() == 'jade.howey@johngore.com'):
+                subscription, created = UserSubscription.objects.get_or_create(user=user)
         
-            subscription.current_plan = 'studio'
-            subscription.is_active = True
-            subscription.subscribed_at = timezone.now()
-            subscription.scripts_remaining = 25  # or whatever unlimited means
-            subscription.audio_remaining = 25
-            subscription.current_period_end = timezone.now() + timedelta(days=365)  # 1 year validity
+                subscription.current_plan = 'studio'
+                subscription.is_active = True
+                subscription.subscribed_at = timezone.now()
+                subscription.scripts_remaining = 25  # or whatever unlimited means
+                subscription.audio_remaining = 25
+                subscription.current_period_end = timezone.now() + timedelta(days=365)  # 1 year validity
         
-            subscription.save()
+                subscription.save()
         
         
         refresh = RefreshToken.for_user(user)
