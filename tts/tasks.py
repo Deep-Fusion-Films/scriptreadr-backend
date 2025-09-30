@@ -14,9 +14,10 @@ from uuid import uuid4
 
 elevenlabs_api_key=settings.ELEVEN_LABS_API_KEY
 
-
 @shared_task(bind=True)
-def process_script_audio(self, dialogues, speaker_voices, user_email):
+def process_script_audio(self, dialogues, speaker_voices, file_name, user_email):
+    
+    uploaded_file_name=file_name
     
     close_old_connections()
     
@@ -121,7 +122,8 @@ def process_script_audio(self, dialogues, speaker_voices, user_email):
     # else:
     Audio.objects.create(
             user=user,
-            processed_audio=filename 
+            processed_audio=filename,
+            audio_name = uploaded_file_name
         )
         
     close_old_connections()

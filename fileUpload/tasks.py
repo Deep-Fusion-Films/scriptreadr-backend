@@ -21,7 +21,9 @@ from llama_index.core.node_parser import SentenceSplitter
 logger = logging.getLogger(__name__)
 
 @shared_task(bind=True)
-def process_script_with_claude(self, default_prompt, file_text, user_email):
+def process_script_with_claude(self, default_prompt, file_text, file_name, user_email):
+    
+    uploaded_file_name = file_name
     
     close_old_connections()
     
@@ -160,11 +162,13 @@ def process_script_with_claude(self, default_prompt, file_text, user_email):
     
         if  processed_script:
             processed_script.processed_script = filename
+            processed_script.file_name = uploaded_file_name
             processed_script.save()
         else:
             ProcessedScript.objects.create(
                 user=user,
-                processed_script=filename 
+                processed_script=filename,
+                file_name=uploaded_file_name 
             )
     except:
         return {

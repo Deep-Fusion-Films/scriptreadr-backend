@@ -237,6 +237,7 @@ class FileUploadView(APIView):
 
         file_name = uploaded_file.name.lower()
         # mime_type = uploaded_file.content_type
+        #store in audio db
         
         try:
             #upload to google cloude
@@ -325,7 +326,7 @@ class FileUploadView(APIView):
         # #use the chunk function
         # chunks = chunk_script_text(file_text)
         try:
-            task = process_script_with_claude.delay(default_prompt, file_text, user.email)
+            task = process_script_with_claude.delay(default_prompt, file_text, file_name, user.email)
         except (CeleryError, OperationalError) as e:
             return Response({"error": "Background Processing Service is currently unavailable please try again later."},status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({"task_id": task.id}, status=200)
@@ -407,7 +408,12 @@ class ProcessedScriptView(APIView):
             
             file_content = blob.download_as_text()
             
-            return Response(json.loads(file_content), status=status.HTTP_200_OK)
+            response_data = {
+                "file_name": processed.file_name,
+                "content": json.loads(file_content)
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": f"Failed to fetch script: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
