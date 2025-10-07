@@ -83,7 +83,9 @@ class Tts(APIView):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
             voices = response.json().get("voices",[])
-            voice_options = [{"id": v["voice_id"], "name": v["name"]} for v in voices]
+                        
+            voice_options = [{"id": v["voice_id"], "name": v["name"], "labels": v.get("labels", {}).get("gender", "unknown")}  for v in voices]
+            
             return Response(voice_options)
     
         except Exception as e:
@@ -115,7 +117,6 @@ class Tts(APIView):
             subscription.save() 
             return Response({"error": "No text provided"}, status=status.HTTP_400_BAD_REQUEST)
         
-        
         speaker_voices = clean_speaker_voices(speaker_voices_raw)
         
         print('cleaned voices', speaker_voices)
@@ -124,7 +125,7 @@ class Tts(APIView):
        
         dialogues = parse_script_generic(cleaned_text)
         
-        print(dialogues)
+        print('this is the dialogue:', dialogues)
         
         task = process_script_audio.delay(dialogues, speaker_voices, file_name, user.email)
     

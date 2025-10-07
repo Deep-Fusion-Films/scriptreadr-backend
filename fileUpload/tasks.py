@@ -104,9 +104,25 @@ def process_script_with_claude(self, default_prompt, file_text, file_name, user_
     formatted_script = "\n\n".join(formatted_chunks)
     # Remove [PAGE_BREAK] markers from final output
     formatted_script = re.sub(r'\[PAGE_BREAK\]', '', formatted_script)
+
+    print("this is the AI text", formatted_script)
     
+
+    # try:
+    #     dialogues = json.loads(formatted_script)
+    # except json.JSONDecodeError as e:
+    #     close_old_connections()
+    #     subscription.scripts_remaining +=1
+    #     subscription.save()
+    #     return {
+    #         "status": "failed",
+    #         "error": f"Invalid JSON returned by AI: {str(e)}"
+    #     }
+     
+
     dialogues = parse_script_generic(formatted_script)
     
+       
     if not dialogues:
         close_old_connections()
         subscription.scripts_remaining +=1
@@ -116,20 +132,35 @@ def process_script_with_claude(self, default_prompt, file_text, file_name, user_
                 "error": "No dialogues found please upload your script again"
         }    
         
-    unique_speakers = set()
-    
-     # Step 2: Loop through each entry in the dialogues list
+        
+    #   #convert json file back into a plain text file
+    # plain_script_text = "\n".join(f"{d['speaker']}: {d['dialogue']}" for d in dialogues)
+  
+      #Extract unique speakers with gender      
+    unique_speakers = {}
+      
     for entry in dialogues:
-        # Step 3: Get the speaker from the entry and add it to the set
-        speaker = entry["speaker"]
-        unique_speakers.add(speaker)
+          speaker = entry.get("speaker")
+          gender = entry.get("gender", "unknown")
+          if speaker and speaker not in unique_speakers:
+              unique_speakers[speaker] = gender
 
-    # Step 4: Convert the set to a list
-    speakers = list(unique_speakers)
+    speakers = [{"speaker": s, "gender": g} for s, g in unique_speakers.items()]
+        
+    # unique_speakers = set()
+    
+    #  # Step 2: Loop through each entry in the dialogues list
+    # for entry in dialogues:
+    #     # Step 3: Get the speaker from the entry and add it to the set
+    #     speaker = entry["speaker"]
+    #     unique_speakers.add(speaker)
+
+    # # Step 4: Convert the set to a list
+    # speakers = list(unique_speakers)
 
     close_old_connections()
     final_result =  {
-            "script": formatted_script,
+            "script": formatted_script, #plain_script_text,
             "dialogue": dialogues,
             "speakers": speakers
         }

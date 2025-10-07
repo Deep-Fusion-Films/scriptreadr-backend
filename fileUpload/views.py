@@ -121,51 +121,51 @@ def extract_text_from_docx(file):
 
 default_prompt = """You are a script formatting expert. Your task is to convert raw script text into a clean format for text-to-speech processing.
 
-
 CRITICAL REQUIREMENTS:
-1. Convert ALL dialogue into the format "CHARACTER_NAME: dialogue text"
-2. Convert ALL narration, title pages, introductory content, stage directions, and scene descriptions into "NARRATOR: description text"
-3. Preserve the logical flow and sequence of the script
-4. Remove any formatting artifacts, page numbers, or irrelevant text
-5. Ensure each speaker line starts on a new line
-6. Keep dialogue natural and readable for voice synthesis
-7. Maintain character names consistently throughout
+1. Convert ALL dialogue into the format:
+   CHARACTER_NAME, GENDER: <male/female/unknown>: <dialogue text>
+2. Convert ALL narration, title pages, introductory content, stage directions, and scene descriptions into:
+   NARRATOR, GENDER: unknown: <description text>
+3. Preserve the logical flow and sequence of the script.
+4. Remove any formatting artifacts, page numbers, or irrelevant text.
+5. Ensure each line starts on a new line.
+6. Keep dialogue natural and readable for voice synthesis.
+7. Maintain character names consistently throughout.
 8. DO NOT:
    - Add any introductory or closing statements
    - Ask questions
-   - Add "Here is your output" or any explantion
+   - Add explanations
    - Reflect on the task
    - Say anything outside the formatted result
    - Comment when no script is provided
    - Ask for clarification
-   - Say anything like “Here is the formatted script”
-   - Reflect or comment on the input
-   - Ask any questions
-   
+
 If no input is provided, acknowledge nothing. Say absolutely nothing.
-example: Since no script was provided after "", I will remain silent as per the instructions to not respond when no input is given, do not say anything like this,
 
-
-INPUT: Raw script text that may contain various formatting
-OUTPUT: Clean script in "SPEAKER: text" format only
+Rules for assigning gender:
+- Use contextual clues (like “he”, “she”, “him”, “her”) to determine gender.
+- If no pronouns appear, infer gender from the name.
+- If the name is ambiguous but later dialogue clarifies gender, use that gender consistently.
+- Never assign "unknown" except for the NARRATOR.
 
 Example input:
     JOHN
     (excited)
     Hello there! How are you?
-    
+
     MARY looks at him suspiciously.
-    
+
     MARY
     I'm fine, thanks.
 
 Example output:
-NARRATOR: JOHN speaks excitedly.
-JOHN: Hello there! How are you?
-NARRATOR: MARY looks at him suspiciously.
-MARY: I'm fine, thanks.
+NARRATOR, GENDER: unknown: JOHN speaks excitedly.
+JOHN, GENDER: male: Hello there! How are you?
+NARRATOR, GENDER: unknown: MARY looks at him suspiciously.
+MARY, GENDER: female: I'm fine, thanks.
 
 Process the following script chunk:"""
+
 
 
 
@@ -198,8 +198,6 @@ class SubscriptionStatusView(APIView):
            
         return Response({"success": "user has subscription"},status=status.HTTP_200_OK)
         
-           
-
 class FileUploadView(APIView):
     authentication_classes = [JWTAuthentication]
     parser_classes = [MultiPartParser, FormParser]
@@ -330,8 +328,7 @@ class FileUploadView(APIView):
         except (CeleryError, OperationalError) as e:
             return Response({"error": "Background Processing Service is currently unavailable please try again later."},status=status.HTTP_503_SERVICE_UNAVAILABLE)
         return Response({"task_id": task.id}, status=200)
-        
-        
+               
 class TaskStatusView(APIView): 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
@@ -353,7 +350,6 @@ class TaskStatusView(APIView):
         
         return Response(response_data)
     
-
 class CancelCeleryTaskAPIView(APIView):
     def post(self, request):
         task_id = request.data.get("task_id")
@@ -364,8 +360,7 @@ class CancelCeleryTaskAPIView(APIView):
         result.revoke(terminate=True, signal='SIGTERM')
         
         return Response({"detail": "Task revoked"})
-    
-    
+        
 class ProcessedScriptView(APIView):
     authentication_classes = [JWTAuthentication]
     

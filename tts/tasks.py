@@ -41,7 +41,7 @@ def process_script_audio(self, dialogues, speaker_voices, file_name, user_email)
     try:
         for i, dialogue in enumerate(dialogues):
             speaker = dialogue.get("speaker", "").strip()
-            text = dialogue.get("text", "").strip()
+            text = dialogue.get("dialogue", "").strip()
             if not speaker or not text:
                 continue
             voice_id = speaker_voices.get(speaker) or settings.VOICE_ID
