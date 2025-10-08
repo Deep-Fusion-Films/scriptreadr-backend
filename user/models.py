@@ -44,11 +44,13 @@ class UploadedFile(models.Model):
 class ProcessedScript(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     processed_script = models.CharField(max_length=500)
+    file_name = models.CharField(max_length=255, null=True, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
 class Audio(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     processed_audio = models.CharField(max_length=500)
+    audio_name = models.CharField(max_length=255, null=True, blank=True) 
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
 class Reset(models.Model):

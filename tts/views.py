@@ -57,11 +57,10 @@ class SubscriptionStatusView(APIView):
            )
            
         return Response({"success": "user has subscription"}, status=status.HTTP_200_OK)
-        
-           
-
-
-#test to speech class
+       
+       
+     
+#text to speech class
 class Tts(APIView):
     #get all voices
     authentication_classes = [JWTAuthentication]
@@ -84,7 +83,9 @@ class Tts(APIView):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
             voices = response.json().get("voices",[])
-            voice_options = [{"id": v["voice_id"], "name": v["name"]} for v in voices]
+                        
+            voice_options = [{"id": v["voice_id"], "name": v["name"], "labels": v.get("labels", {}).get("gender", "unknown")}  for v in voices]
+            
             return Response(voice_options)
     
         except Exception as e:
@@ -102,6 +103,8 @@ class Tts(APIView):
         subscription.save()    
         
         
+        file_name = request.data.get('displayFileName')
+        
         input_text = request.data.get('text')
         
         # voice_id = request.data.get("voice_id") or settings.VOICE_ID  # Default ElevenLabs voice
@@ -114,7 +117,6 @@ class Tts(APIView):
             subscription.save() 
             return Response({"error": "No text provided"}, status=status.HTTP_400_BAD_REQUEST)
         
-        
         speaker_voices = clean_speaker_voices(speaker_voices_raw)
         
         print('cleaned voices', speaker_voices)
@@ -123,14 +125,15 @@ class Tts(APIView):
        
         dialogues = parse_script_generic(cleaned_text)
         
-        print(dialogues)
+        print('this is the dialogue:', dialogues)
         
-        task = process_script_audio.delay(dialogues,speaker_voices,user.email)
+        task = process_script_audio.delay(dialogues, speaker_voices, file_name, user.email)
     
         print('the task id is:' + task.id)
         return Response({"task_id": task.id}, status=200)
-            
-        
+    
+    
+                    
 class TaskStatusView(APIView): 
     def get(self, request, task_id):
         result = AsyncResult(task_id)
@@ -164,11 +167,9 @@ class CancelAudioTaskAPIView(APIView):
         result.revoke(terminate=True, signal='SIGTERM')
         
         return Response({"detail": "Task revoked"})
+
+
     
-    
-
-
-
 class ProcessedAudioView(APIView):
     authentication_classes = [JWTAuthentication]
 
@@ -177,6 +178,92 @@ class ProcessedAudioView(APIView):
 
         # Get the most recent processed audio for the user
         processed = Audio.objects.filter(user=user).order_by('-uploaded_at').first()
+
+        if not processed or not processed.processed_audio:
+            return Response({"error": "No processed script found for this user, please try again"},
+                            status=status.HTTP_404_NOT_FOUND)
+            
+        try:
+            # Connect to Google Cloud
+            if settings.GOOGLE_CLOUD_CREDENTIALS:
+                client = storage.Client(credentials=settings.GOOGLE_CLOUD_CREDENTIALS)
+            else:
+                client = storage.Client()
+
+            bucket = client.bucket(settings.GCS_BUCKET_NAME)
+            blob = bucket.blob(processed.processed_audio)
+
+            #Retry logic
+            max_retries = 5
+            retry_delay = 2
+            
+            for attempt in range(max_retries):
+                if blob.exists():
+                    print(f"audio File found on attempt {attempt + 1}")
+                    break
+                sleep(retry_delay)
+            else:
+                return Response(
+                    {"error": "Processed audio is not yet ready. Please refresh or try again"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+
+            #Generate a signed URL valid for 1 hour
+            signed_url = blob.generate_signed_url(
+                version="v4",
+                expiration=3600,  # 1 hour
+                method="GET",
+                response_type="audio/mpeg"
+            )
+
+            # Prepare JSON response with signed URL
+            response_data = {
+                "audio_url": signed_url,
+                "audio_name": processed.audio_name
+                }
+
+            # CORS support
+            allowed_origins = [
+                "http://localhost:5173",
+                "https://scriptreadr-frontend.vercel.app"
+                
+            ]
+            origin = request.headers.get("Origin")
+
+            response = Response(response_data, status=status.HTTP_200_OK)
+
+            if origin in allowed_origins:
+                response['Access-Control-Allow-Origin'] = origin
+                response['Access-Control-Allow-Credentials'] = 'true'
+                response['Vary'] = 'Origin'
+
+            return response
+
+        except Exception as e:
+            return Response({"error": "Failed to download script please refresh or try again."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+#single audio view
+class SingleAudioView(APIView):
+    authentication_classes = [JWTAuthentication]
+
+    def post(self, request):
+        user = request.user
+
+        file_name = request.data.get("file_name")
+        
+        if not file_name:
+            return Response({"error": "file name is required"},
+                            status=status.HTTP_400_BAD_REQUEST)
+            
+        # Get the most recent processed audio for the user
+        try:
+            processed = Audio.objects.get(user=user, processed_audio=file_name)
+        except Audio.DoesNotExist:
+            return Response({"error": "Audio not found"},
+                            status=status.HTTP_404_NOT_FOUND)
 
         if not processed or not processed.processed_audio:
             return Response({"error": "No processed script found for this user, please try again"},
@@ -216,7 +303,8 @@ class ProcessedAudioView(APIView):
             )
 
             # Prepare JSON response with signed URL
-            response_data = {"audio_url": signed_url}
+            response_data = {"audio_url": signed_url,
+                            "audio_name": processed.audio_name}
 
             # CORS support
             allowed_origins = [
@@ -236,14 +324,87 @@ class ProcessedAudioView(APIView):
             return response
 
         except Exception as e:
-            return Response({"error": "Failed to download script please refresh or try again."},
+            return Response({"error": "Failed to load script please try again!"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+
+class SingleAudioDeleteView(APIView):
+    authentication_classes = [JWTAuthentication]
+
+    def delete(self, request):
+        user = request.user
+        file_name = request.data.get("file_name")
+
+        if not file_name:
+            return Response(
+                {"error": "file name is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Fetch the audio object from the database
+        try:
+            audio_obj = Audio.objects.get(user=user, processed_audio=file_name)
+        except Audio.DoesNotExist:
+            return Response({"error": "Audio not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            # Initialize Google Cloud client
+            client = storage.Client(
+                credentials=settings.GOOGLE_CLOUD_CREDENTIALS
+            ) if settings.GOOGLE_CLOUD_CREDENTIALS else storage.Client()
+            
+            bucket = client.bucket(settings.GCS_BUCKET_NAME)
+            blob = bucket.blob(audio_obj.processed_audio)
+
+            # Retry logic to ensure blob exists before deleting
+            max_retries = 5
+            retry_delay = 2
+            for attempt in range(max_retries):
+                if blob.exists():
+                    blob.delete()  # <-- delete the file
+                    break
+                sleep(retry_delay)
+            else:
+                return Response(
+                    {"error": "Audio file not found in storage."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Delete the record from the database
+            audio_obj.delete()
+
+            return Response({"success": "Audio deleted successfully"}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to delete audio: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            
+class UserAudiosView(APIView):
+    authentication_classes = [JWTAuthentication]
+    
+    def get(self, request):
+        user = request.user
         
+        #fetch all audios for this user
+        audios = Audio.objects.filter(user=user).order_by("-uploaded_at")
         
+        if not audios.exists():
+            return Response({"error": "No saved audio yet"}, status=status.HTTP_404_NOT_FOUND)       
         
+        data = []
         
-        
+        for audio in audios:
+            data.append({
+                "url": audio.processed_audio,
+                "audio_name": audio.audio_name,
+                "uploaded_at":audio.uploaded_at
+            })
+            
+        return Response({"data": data}, status=status.HTTP_200_OK)
+         
 #voice preview classes
 class VoicePreviewSubcriptionStatusView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -272,8 +433,8 @@ class VoicePreviewSubcriptionStatusView(APIView):
            )
            
         return Response({"success": "user has subscription"},status=status.HTTP_200_OK)
-        
-           
+
+                   
 class PreviewVoicesAPIView(APIView):
     def post(self, request):
         voice_id = request.data.get("voice_id") or settings.VOICE_ID

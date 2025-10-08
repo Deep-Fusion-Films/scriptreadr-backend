@@ -21,7 +21,9 @@ from llama_index.core.node_parser import SentenceSplitter
 logger = logging.getLogger(__name__)
 
 @shared_task(bind=True)
-def process_script_with_claude(self, default_prompt, file_text, user_email):
+def process_script_with_claude(self, default_prompt, file_text, file_name, user_email):
+    
+    uploaded_file_name = file_name
     
     close_old_connections()
     
@@ -102,9 +104,33 @@ def process_script_with_claude(self, default_prompt, file_text, user_email):
     formatted_script = "\n\n".join(formatted_chunks)
     # Remove [PAGE_BREAK] markers from final output
     formatted_script = re.sub(r'\[PAGE_BREAK\]', '', formatted_script)
+
+    print("this is the AI text", formatted_script)
     
-    dialogues = parse_script_generic(formatted_script)
+
+    # try:
+    #     dialogues = json.loads(formatted_script)
+    # except json.JSONDecodeError as e:
+    #     close_old_connections()
+    #     subscription.scripts_remaining +=1
+    #     subscription.save()
+    #     return {
+    #         "status": "failed",
+    #         "error": f"Invalid JSON returned by AI: {str(e)}"
+    #     }
+     
+    try:   
+        dialogues = parse_script_generic(formatted_script)
+    except Exception as e:
+        close_old_connections()
+        subscription.scripts_remaining +=1
+        subscription.save()
+        return {
+                "status": "failed",
+                "error": "Encountered an error while parsing formated script, please try again"
+        }    
     
+       
     if not dialogues:
         close_old_connections()
         subscription.scripts_remaining +=1
@@ -114,20 +140,44 @@ def process_script_with_claude(self, default_prompt, file_text, user_email):
                 "error": "No dialogues found please upload your script again"
         }    
         
-    unique_speakers = set()
-    
-     # Step 2: Loop through each entry in the dialogues list
-    for entry in dialogues:
-        # Step 3: Get the speaker from the entry and add it to the set
-        speaker = entry["speaker"]
-        unique_speakers.add(speaker)
+        
+    #   #convert json file back into a plain text file
+    # plain_script_text = "\n".join(f"{d['speaker']}: {d['dialogue']}" for d in dialogues)
+  
+      #Extract unique speakers with gender      
+    unique_speakers = {}
+      
+    try:
+        for entry in dialogues:
+          speaker = entry.get("speaker")
+          gender = entry.get("gender", "unknown")
+          if speaker and speaker not in unique_speakers:
+              unique_speakers[speaker] = gender
+    except Exception as e:
+        close_old_connections()
+        subscription.scripts_remaining +=1
+        subscription.save()
+        return {
+                "status": "failed",
+                "error": "Encountered an error whil extracting speakers from script"
+        }    
 
-    # Step 4: Convert the set to a list
-    speakers = list(unique_speakers)
+    speakers = [{"speaker": s, "gender": g} for s, g in unique_speakers.items()]
+        
+    # unique_speakers = set()
+    
+    #  # Step 2: Loop through each entry in the dialogues list
+    # for entry in dialogues:
+    #     # Step 3: Get the speaker from the entry and add it to the set
+    #     speaker = entry["speaker"]
+    #     unique_speakers.add(speaker)
+
+    # # Step 4: Convert the set to a list
+    # speakers = list(unique_speakers)
 
     close_old_connections()
     final_result =  {
-            "script": formatted_script,
+            "script": formatted_script, #plain_script_text,
             "dialogue": dialogues,
             "speakers": speakers
         }
@@ -160,11 +210,13 @@ def process_script_with_claude(self, default_prompt, file_text, user_email):
     
         if  processed_script:
             processed_script.processed_script = filename
+            processed_script.file_name = uploaded_file_name
             processed_script.save()
         else:
             ProcessedScript.objects.create(
                 user=user,
-                processed_script=filename 
+                processed_script=filename,
+                file_name=uploaded_file_name 
             )
     except:
         return {

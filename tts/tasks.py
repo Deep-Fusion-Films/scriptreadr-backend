@@ -8,14 +8,16 @@ from user.models import User, Audio, UserSubscription
 from google.cloud import storage
 from google.api_core.exceptions import GoogleAPIError
 from django.core.exceptions import ObjectDoesNotExist
+from uuid import uuid4
 
 
 
 elevenlabs_api_key=settings.ELEVEN_LABS_API_KEY
 
-
 @shared_task(bind=True)
-def process_script_audio(self, dialogues, speaker_voices, user_email):
+def process_script_audio(self, dialogues, speaker_voices, file_name, user_email):
+    
+    uploaded_file_name=file_name
     
     close_old_connections()
     
@@ -39,7 +41,7 @@ def process_script_audio(self, dialogues, speaker_voices, user_email):
     try:
         for i, dialogue in enumerate(dialogues):
             speaker = dialogue.get("speaker", "").strip()
-            text = dialogue.get("text", "").strip()
+            text = dialogue.get("dialogue", "").strip()
             if not speaker or not text:
                 continue
             voice_id = speaker_voices.get(speaker) or settings.VOICE_ID
@@ -92,7 +94,7 @@ def process_script_audio(self, dialogues, speaker_voices, user_email):
         else:
             client = storage.Client()
         bucket = client.bucket(settings.GCS_BUCKET_NAME)
-        filename = f"processed_audio/{user.email}_processed_audio.mp3"
+        filename = f"processed_audio/{user.email}_{uuid4().hex}_processed_audio.mp3"
         blob = bucket.blob(filename)
         
         #ensure pointer is at the start before upload 
@@ -112,16 +114,17 @@ def process_script_audio(self, dialogues, speaker_voices, user_email):
     
     close_old_connections()
     #Update or create the UploadedFile record (depends on your lagic)
-    processed_script = Audio.objects.filter(user=user).order_by('-uploaded_at').first()
+    # processed_script = Audio.objects.filter(user=user).order_by('-uploaded_at').first()
     
-    if  processed_script:
-        processed_script.processed_script = filename
-        processed_script.save()
-    else:
-        Audio.objects.create(
-                user=user,
-                processed_audio=filename 
-            )
+    # if  processed_script:
+    #     processed_script.processed_script = filename
+    #     processed_script.save()
+    # else:
+    Audio.objects.create(
+            user=user,
+            processed_audio=filename,
+            audio_name = uploaded_file_name
+        )
         
     close_old_connections()
     return {"status": "success"}
