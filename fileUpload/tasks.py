@@ -119,8 +119,16 @@ def process_script_with_claude(self, default_prompt, file_text, file_name, user_
     #         "error": f"Invalid JSON returned by AI: {str(e)}"
     #     }
      
-
-    dialogues = parse_script_generic(formatted_script)
+    try:   
+        dialogues = parse_script_generic(formatted_script)
+    except Exception as e:
+        close_old_connections()
+        subscription.scripts_remaining +=1
+        subscription.save()
+        return {
+                "status": "failed",
+                "error": "Encountered an error while parsing formated script, please try again"
+        }    
     
        
     if not dialogues:
@@ -139,11 +147,20 @@ def process_script_with_claude(self, default_prompt, file_text, file_name, user_
       #Extract unique speakers with gender      
     unique_speakers = {}
       
-    for entry in dialogues:
+    try:
+        for entry in dialogues:
           speaker = entry.get("speaker")
           gender = entry.get("gender", "unknown")
           if speaker and speaker not in unique_speakers:
               unique_speakers[speaker] = gender
+    except Exception as e:
+        close_old_connections()
+        subscription.scripts_remaining +=1
+        subscription.save()
+        return {
+                "status": "failed",
+                "error": "Encountered an error whil extracting speakers from script"
+        }    
 
     speakers = [{"speaker": s, "gender": g} for s, g in unique_speakers.items()]
         
