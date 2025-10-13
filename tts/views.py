@@ -85,7 +85,7 @@ class Tts(APIView):
             voices = response.json().get("voices",[])
                         
             voice_options = [{"id": v["voice_id"], "name": v["name"], "labels": v.get("labels", {}).get("gender", "unknown")}  for v in voices]
-            
+                        
             return Response(voice_options)
     
         except Exception as e:
@@ -95,7 +95,6 @@ class Tts(APIView):
     def post(self, request):
         user = request.user
         
-       
         subscription = UserSubscription.objects.get(user=user)
 
         #decrement scripts remaining by 1
@@ -109,27 +108,20 @@ class Tts(APIView):
         
         # voice_id = request.data.get("voice_id") or settings.VOICE_ID  # Default ElevenLabs voice
         speaker_voices_raw = request.data.get('speaker_voices')
-        
-        print('uncleaned voices', speaker_voices_raw)
-        
+                
         if not input_text:
             subscription.audio_remaining -=1
             subscription.save() 
             return Response({"error": "No text provided"}, status=status.HTTP_400_BAD_REQUEST)
         
         speaker_voices = clean_speaker_voices(speaker_voices_raw)
-        
-        print('cleaned voices', speaker_voices)
-        
+                
         cleaned_text = sanitize_for_tts(input_text)        
        
         dialogues = parse_script_generic(cleaned_text)
-        
-        print('this is the dialogue:', dialogues)
-        
+                
         task = process_script_audio.delay(dialogues, speaker_voices, file_name, user.email)
     
-        print('the task id is:' + task.id)
         return Response({"task_id": task.id}, status=200)
     
     
@@ -155,8 +147,6 @@ class TaskStatusView(APIView):
         
         return Response(response_data)
 
-
-
 class CancelAudioTaskAPIView(APIView):
     def post(self, request):
         task_id = request.data.get("task_id")
@@ -167,8 +157,6 @@ class CancelAudioTaskAPIView(APIView):
         result.revoke(terminate=True, signal='SIGTERM')
         
         return Response({"detail": "Task revoked"})
-
-
     
 class ProcessedAudioView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -242,8 +230,6 @@ class ProcessedAudioView(APIView):
         except Exception as e:
             return Response({"error": "Failed to download script please refresh or try again."},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 #single audio view
 class SingleAudioView(APIView):
@@ -326,8 +312,6 @@ class SingleAudioView(APIView):
         except Exception as e:
             return Response({"error": "Failed to load script please try again!"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 class SingleAudioDeleteView(APIView):
     authentication_classes = [JWTAuthentication]
@@ -433,7 +417,6 @@ class VoicePreviewSubcriptionStatusView(APIView):
            )
            
         return Response({"success": "user has subscription"},status=status.HTTP_200_OK)
-
                    
 class PreviewVoicesAPIView(APIView):
     def post(self, request):
